@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NC Chemistry Study Hub</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#667085;--accent:#2563eb;--accent2:#7c3aed;--border:#dfe4ec;--good:#15803d;--bad:#b91c1c;}
+*{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(135deg,#111827,#263b74);color:white;padding:38px 20px;text-align:center}
+header h1{margin:0 0 8px;font-size:clamp(2rem,5vw,3.4rem)} header p{margin:0;color:#dbe4ff}
+nav{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--border);display:flex;justify-content:center;gap:8px;padding:10px;box-shadow:0 2px 10px #0000000d}
+nav button,.btn{border:1px solid var(--border);background:#fff;padding:10px 15px;border-radius:10px;cursor:pointer;font-weight:700;color:var(--text)}
+nav button.active,.btn.primary{background:var(--accent);color:white;border-color:var(--accent)}
+.container{max-width:1100px;margin:auto;padding:24px 16px 50px}
+.section{display:none} .section.active{display:block}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 20px} input,select,textarea{border:1px solid var(--border);border-radius:10px;padding:11px;font:inherit;background:white} #search{flex:1;min-width:230px}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px} .stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 18px;min-width:150px} .stat strong{font-size:1.4rem;display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:15px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:0 4px 15px #00000008}
+.card h3{margin:0 0 8px} .tag{display:inline-block;font-size:.75rem;background:#eef2ff;color:#4338ca;border-radius:999px;padding:4px 8px;margin-bottom:10px}
+.card p{line-height:1.55;color:#475467} .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.mastered{border-color:#86efac;background:#f0fdf4} .mastered .tag{background:#dcfce7;color:#166534}
+.flash-wrap{perspective:1000px;max-width:700px;margin:25px auto}
+.flashcard{height:330px;position:relative;transform-style:preserve-3d;transition:transform .65s cubic-bezier(.2,.75,.25,1);cursor:pointer}
+.flashcard.flipped{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;border:1px solid var(--border);border-radius:22px;background:white;box-shadow:0 15px 40px #00000012;display:flex;align-items:center;justify-content:center;text-align:center;padding:35px}
+.front{font-size:2rem;font-weight:800} .back{transform:rotateY(180deg);font-size:1.15rem;line-height:1.65;color:#475467}
+.flash-controls{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.quiz-box{max-width:800px;margin:auto} .option{display:block;width:100%;text-align:left;margin:10px 0;padding:13px;border:1px solid var(--border);border-radius:11px;background:#fff;cursor:pointer}
+.option:hover{border-color:var(--accent)} .result{margin-top:15px;padding:15px;border-radius:12px} .correct{background:#ecfdf3;color:var(--good)} .incorrect{background:#fef2f2;color:var(--bad)}
+textarea{width:100%;min-height:120px;resize:vertical} .small{font-size:.9rem;color:var(--muted)} footer{text-align:center;color:var(--muted);padding:25px;border-top:1px solid var(--border)}
+.badge{font-size:.8rem;font-weight:700;color:#475467} .hidden{display:none!important}
+@media(max-width:600px){.flashcard{height:360px}}
+</style>
+</head>
+<body>
+<header>
+<h1>🧪 Chemistry Study Hub</h1>
+<p>NC Chemistry • PS.Chm.7 • Vocabulary, flashcards, and practice</p>
+</header>
+<nav>
+<button class="active" onclick="showSection('vocab',this)">Vocabulary</button>
+<button onclick="showSection('flashcards',this)">Flashcards</button>
+<button onclick="showSection('quiz',this)">Quiz</button>
+</nav>
+
+<main class="container">
+<section id="vocab" class="section active">
+<h2>Vocabulary</h2>
+<p class="small">Definitions are student-friendly explanations refined around NC objectives PS.Chm.7.1–7.3. They are not verbatim NC DPI text.</p>
+<div class="toolbar">
+<input id="search" placeholder="Search a term or definition..." oninput="renderVocab()">
+<select id="category" onchange="renderVocab()"><option value="all">All categories</option></select>
+</div>
+<div class="stats">
+<div class="stat"><span class="small">Terms</span><strong id="termCount">0</strong></div>
+<div class="stat"><span class="small">Mastered</span><strong id="masteredCount">0</strong></div>
+<div class="stat"><span class="small">Progress</span><strong id="progress">0%</strong></div>
+</div>
+<div id="vocabGrid" class="grid"></div>
+</section>
+
+<section id="flashcards" class="section">
+<h2>Flashcards</h2>
+<p class="small">Click the card or “Flip Card.” The 3D animation rotates the card to reveal the definition.</p>
+<div class="flash-wrap">
+<div id="flashcard" class="flashcard" onclick="flipCard()">
+<div class="face front" id="flashFront"></div>
+<div class="face back" id="flashBack"></div>
+</div>
+</div>
+<div class="flash-controls">
+<button class="btn" onclick="prevCard()">← Previous</button>
+<button class="btn primary" onclick="flipCard()">Flip Card</button>
+<button class="btn" onclick="nextCard()">Next →</button>
+<button class="btn" onclick="markFlashMastered()">✓ Mark Mastered</button>
+</div>
+<p style="text-align:center" class="small" id="flashCounter"></p>
+</section>
+
+<section id="quiz" class="section">
+<h2>Quiz</h2>
+<div class="toolbar">
+<select id="quizMode" onchange="newQuiz()">
+<option value="mc">Multiple Choice</option>
+<option value="short">Short Answer</option>
+</select>
+<select id="quizCategory" onchange="newQuiz()"><option value="all">All categories</option></select>
+</div>
+<div class="quiz-box card">
+<div class="badge" id="quizProgress"></div>
+<h3 id="quizQuestion"></h3>
+<div id="quizArea"></div>
+<button class="btn primary" onclick="submitQuiz()">Check Answer</button>
+<button class="btn" onclick="newQuiz()">Next Question</button>
+<div id="quizResult"></div>
+</div>
+</section>
+</main>
+
+<footer>
+NC Chemistry Study Hub • Aligned to the current NC Chemistry objectives PS.Chm.7.1, PS.Chm.7.2, and PS.Chm.7.3.
+</footer>
+
+<script>
+const terms = [{"term": "Δ", "definition": "The symbol Δ means “change in.” For example, ΔT means the change in temperature. It is commonly used when comparing an initial value with a final value.", "category": "Notation"}, {"term": "boiling point", "definition": "The temperature at which a liquid's vapor pressure equals the pressure surrounding the liquid, so vaporization can occur throughout the liquid. The boiling point changes when external pressure changes.", "category": "Phase Changes"}, {"term": "condensation", "definition": "The phase change from a gas to a liquid. Energy is transferred away from the substance, particles generally move less, and particles can come closer together as intermolecular attractions become more effective.", "category": "Phase Changes"}, {"term": "cooling curve", "definition": "A graph of temperature versus time or energy removed as a substance loses thermal energy. Sloped sections show temperature changing within one phase; flat sections show a phase change while energy is being removed.", "category": "Energy & Graphs"}, {"term": "deposition", "definition": "The phase change directly from a gas to a solid without passing through the liquid state. Energy is removed and particles become more ordered and strongly held in place.", "category": "Phase Changes"}, {"term": "elastic collision", "definition": "A collision in which total kinetic energy and momentum are conserved. In the ideal kinetic molecular model of a gas, particles collide elastically with one another and with the container walls.", "category": "Particle Model"}, {"term": "element", "definition": "A pure substance made of only one type of atom. Each element has a unique atomic number and cannot be broken into simpler substances by ordinary chemical means.", "category": "Matter"}, {"term": "evaporation", "definition": "Vaporization that occurs at the surface of a liquid and can happen below the boiling point. Higher-energy particles escape the surface, leaving the remaining liquid with lower average kinetic energy.", "category": "Phase Changes"}, {"term": "freezing point", "definition": "The temperature at which a liquid changes to a solid at a specified pressure. At the freezing point, the liquid and solid phases can coexist in equilibrium.", "category": "Phase Changes"}, {"term": "gas", "definition": "A state of matter in which particles are far apart, move freely and rapidly, and have relatively weak intermolecular attractions. A gas has no fixed shape or volume and expands to fill its container.", "category": "States of Matter"}, {"term": "heating curve", "definition": "A graph showing how a substance's temperature changes as thermal energy is added. Sloped sections show temperature increasing within a phase; flat sections show a phase change while energy is added.", "category": "Energy & Graphs"}, {"term": "ideal gas law", "definition": "An equation relating pressure, volume, amount of gas, and absolute temperature: PV = nRT. It models the behavior of an ideal gas and can be used to calculate one variable when the others are known.", "category": "Gas Relationships"}, {"term": "kinetic molecular theory", "definition": "A model used to explain gas behavior by treating gas particles as tiny particles in constant random motion with negligible individual volume and elastic collisions. Particle kinetic energy increases as absolute temperature increases.", "category": "Particle Model"}, {"term": "liquid", "definition": "A state of matter with a definite volume but no fixed shape. Particles remain close together, can move past one another, and experience intermolecular attractions stronger than those in a gas but generally weaker than those holding a solid together.", "category": "States of Matter"}, {"term": "melting point", "definition": "The temperature at which a solid changes to a liquid at a specified pressure. At the melting point, solid and liquid phases can coexist in equilibrium.", "category": "Phase Changes"}, {"term": "normal boiling point", "definition": "The boiling temperature of a substance when the external pressure is exactly 1 atm. Because boiling depends on pressure, a substance's normal boiling point is a standard reference value.", "category": "Phase Changes"}, {"term": "normal melting point", "definition": "The melting temperature of a substance when the pressure is 1 atm. It is a standard reference value for comparing substances.", "category": "Phase Changes"}, {"term": "phase diagram", "definition": "A graph that shows which phase of a substance is stable at different combinations of temperature and pressure. Boundaries represent conditions where two phases can coexist.", "category": "Energy & Graphs"}, {"term": "pressure", "definition": "Force exerted per unit area. For a gas, pressure results from collisions of gas particles with the walls of the container. For a fixed amount of gas at constant volume, increasing temperature increases pressure.", "category": "Gas Relationships"}, {"term": "solid", "definition": "A state of matter with a definite shape and volume. Particles are closely packed, have relatively strong intermolecular attractions, and mainly vibrate around fixed positions.", "category": "States of Matter"}, {"term": "solidification", "definition": "The process in which a substance changes from a liquid to a solid. It is also called freezing and involves energy being removed from the substance.", "category": "Phase Changes"}, {"term": "solution", "definition": "A homogeneous mixture in which one or more substances are uniformly distributed throughout another substance. The substances remain chemically distinct even though they are evenly mixed.", "category": "Matter"}, {"term": "specific heat", "definition": "The amount of thermal energy required to raise the temperature of a unit mass of a substance by one degree. In calorimetry, it is used with q = mcΔT to calculate energy transferred as temperature changes.", "category": "Calorimetry"}, {"term": "standard pressure", "definition": "A reference pressure of 1 atm, equal to 101.325 kPa. It is used when defining standard reference conditions such as normal boiling and melting points.", "category": "Reference Conditions"}, {"term": "standard temperature", "definition": "A reference temperature of 0 °C (273.15 K) when used with standard pressure in the common STP convention. Always check the convention being used because standard-reference definitions can vary by context.", "category": "Reference Conditions"}, {"term": "sublimation", "definition": "The phase change directly from a solid to a gas without passing through the liquid state. Energy is absorbed as particles overcome intermolecular attractions and move farther apart.", "category": "Phase Changes"}, {"term": "temperature", "definition": "A measure related to the average kinetic energy of the particles in a substance. Higher temperature means particles have greater average kinetic energy.", "category": "Energy"}, {"term": "vaporization", "definition": "The phase change from a liquid to a gas. Vaporization includes evaporation, which occurs at the surface, and boiling, which occurs throughout the liquid at its boiling point.", "category": "Phase Changes"}, {"term": "volume", "definition": "The amount of three-dimensional space occupied by a substance or sample. For a gas, volume is the space available to the particles and is related to pressure, temperature, and amount of gas.", "category": "Gas Relationships"}];
+let mastered = JSON.parse(localStorage.getItem("ncChemMasteredV2") || "[]");
+let flashIndex=0, flashFlipped=false, currentQuiz=null, quizScore=0, quizTotal=0;
+
+function save(){localStorage.setItem("ncChemMasteredV2",JSON.stringify(mastered));}
+function showSection(id,btn){document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));document.getElementById(id).classList.add("active");document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));btn.classList.add("active");if(id==="quiz")newQuiz();}
+function setupFilters(){
+ const cats=[...new Set(terms.map(t=>t.category))];
+ ["category","quizCategory"].forEach(id=>{const el=document.getElementById(id);cats.forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;el.appendChild(o)})});
+}
+function renderVocab(){
+ const q=document.getElementById("search").value.toLowerCase(), cat=document.getElementById("category").value;
+ const filtered=terms.filter(t=>(cat==="all"||t.category===cat)&&(t.term.toLowerCase().includes(q)||t.definition.toLowerCase().includes(q)));
+ document.getElementById("vocabGrid").innerHTML=filtered.map((t)=>{
+  const m=mastered.includes(t.term);
+  return `<article class="card ${m?"mastered":""}">
+  <span class="tag">${t.category}</span><h3>${escapeHtml(t.term)}</h3><p>${escapeHtml(t.definition)}</p>
+  <div class="actions"><button class="btn" onclick='toggleMastered(${JSON.stringify(t.term)})'>${m?"✓ Mastered":"Mark mastered"}</button>
+  <button class="btn" onclick='jumpToFlash(${JSON.stringify(t.term)})'>Flashcard</button></div></article>`;
+ }).join("");
+ updateStats();
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
+function toggleMastered(term){if(mastered.includes(term))mastered=mastered.filter(x=>x!==term);else mastered.push(term);save();renderVocab();}
+function updateStats(){document.getElementById("termCount").textContent=terms.length;document.getElementById("masteredCount").textContent=mastered.length;document.getElementById("progress").textContent=Math.round(mastered.length/terms.length*100)+"%";}
+function jumpToFlash(term){flashIndex=terms.findIndex(t=>t.term===term);document.querySelectorAll("nav button")[1].click();updateFlash();}
+function updateFlash(){const t=terms[flashIndex];const c=document.getElementById("flashcard");c.classList.remove("flipped");flashFlipped=false;document.getElementById("flashFront").textContent=t.term;document.getElementById("flashBack").textContent=t.definition;document.getElementById("flashCounter").textContent=`${flashIndex+1} / ${terms.length}`;}
+function flipCard(){flashFlipped=!flashFlipped;document.getElementById("flashcard").classList.toggle("flipped",flashFlipped);}
+function nextCard(){flashIndex=(flashIndex+1)%terms.length;updateFlash();}
+function prevCard(){flashIndex=(flashIndex-1+terms.length)%terms.length;updateFlash();}
+function markFlashMastered(){const term=terms[flashIndex].term;if(!mastered.includes(term))mastered.push(term);save();updateStats();renderVocab();}
+function newQuiz(){
+ const mode=document.getElementById("quizMode").value, cat=document.getElementById("quizCategory").value;
+ let pool=terms.filter(t=>cat==="all"||t.category===cat);
+ const t=pool[Math.floor(Math.random()*pool.length)];
+ currentQuiz={term:t.term,definition:t.definition,mode};
+ document.getElementById("quizProgress").textContent=`Score: ${quizScore} / ${quizTotal}`;
+ document.getElementById("quizQuestion").textContent=mode==="mc"?`Which definition best matches “${t.term}”?`:`Define “${t.term}” in your own words.`;
+ document.getElementById("quizResult").innerHTML="";
+ const area=document.getElementById("quizArea");
+ if(mode==="mc"){
+  const choices=[t];
+  while(choices.length<4){const x=pool[Math.floor(Math.random()*pool.length)];if(!choices.some(c=>c.term===x.term))choices.push(x);}
+  choices.sort(()=>Math.random()-.5);
+  area.innerHTML=choices.map((x,i)=>`<button class="option" data-term="${escapeHtml(x.term)}" onclick="selectOption(this)">${escapeHtml(x.definition)}</button>`).join("");
+ } else {
+  area.innerHTML=`<textarea id="shortAnswer" placeholder="Type the definition here..."></textarea><p class="small">Your answer does not need to match word-for-word. The checker looks for the important ideas in the official study definition.</p>`;
+ }
+}
+function selectOption(btn){document.querySelectorAll(".option").forEach(b=>b.style.outline="");btn.style.outline="3px solid #2563eb";window.selectedOption=btn;}
+function normalize(s){return s.toLowerCase().replace(/[^a-z0-9\s]/g," ").replace(/\s+/g," ").trim();}
+function keywords(def){return normalize(def).split(" ").filter(w=>w.length>=4&&!["with","from","that","this","into","they","their","when","where","which","have","will","than","also","only"].includes(w));}
+function shortAnswerCloseEnough(answer,def){
+ const a=normalize(answer), d=normalize(def);
+ if(!a)return false;
+ const important=[...new Set(keywords(def))];
+ const hits=important.filter(w=>a.includes(w)).length;
+ const ratio=important.length?hits/Math.min(important.length,8):0;
+ const phraseMatch=a.includes(d)||d.includes(a);
+ return phraseMatch || hits>=Math.min(3,important.length) || ratio>=0.5;
+}
+function submitQuiz(){
+ if(!currentQuiz)return;
+ let correct=false, explanation="";
+ if(currentQuiz.mode==="mc"){
+  if(!window.selectedOption){document.getElementById("quizResult").innerHTML='<div class="result incorrect">Choose an answer first.</div>';return;}
+  correct=window.selectedOption.dataset.term===currentQuiz.term;
+  explanation=correct?"Correct!":"Not quite. Review the definition below.";
+ } else {
+  const ans=document.getElementById("shortAnswer").value;
+  correct=shortAnswerCloseEnough(ans,currentQuiz.definition);
+  explanation=correct?"Correct! Your answer contains the key ideas.":"Not quite. Try again and include the main ideas from the definition.";
+ }
+ quizTotal++; if(correct)quizScore++;
+ document.getElementById("quizProgress").textContent=`Score: ${quizScore} / ${quizTotal}`;
+ document.getElementById("quizResult").innerHTML=`<div class="result ${correct?"correct":"incorrect"}"><strong>${explanation}</strong><br><br><b>Study definition:</b> ${escapeHtml(currentQuiz.definition)}</div>`;
+}
+setupFilters();renderVocab();updateFlash();newQuiz();
+</script>
+</body>
+</html>
